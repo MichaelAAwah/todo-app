@@ -10,9 +10,19 @@ interface Todo {
 export default function App() {
   const [checked, setChecked] = useState(false)
   const [todos, setTodos] = useState<Todo[]>([])
+  const emptyTodo = {
+    id: '',
+    todo: '',
+    dateCreated: new Date(),
+    isCompleted: false,
+  }
 
   function generateUniqueId() {
-    return Math.random().toString(36).substr(2, 9);
+    return Math.random().toString(36).substring(2, 9);
+  }
+
+  function sortTodosOldestToRecent(todos: Todo[]): Todo[] {
+    return todos.sort((a, b) => a.dateCreated.getTime() - b.dateCreated.getTime()).reverse()
   }
 
   function addTodo(todo: string) {
@@ -31,9 +41,13 @@ export default function App() {
     if(selectedTodoIdx !== -1) {
       tempTodos[selectedTodoIdx] = { ...tempTodos[selectedTodoIdx], isCompleted: !todo.isCompleted }
       const completedTodos = tempTodos.filter(todo => todo.isCompleted)
-      const notCompletedTodos = tempTodos.filter(todo => !todo.isCompleted)
+      const notCompletedTodos = sortTodosOldestToRecent(tempTodos.filter(todo => !todo.isCompleted))
       setTodos([...notCompletedTodos, ...completedTodos])
     }
+  }
+
+  function deleteTodo(todo: Todo) {
+    setTodos(todos.filter(t => t.id !== todo.id))
   }
 
   return (
@@ -57,11 +71,20 @@ export default function App() {
                   </div>
 
                   <div className='shadow-lg rounded-sm'>
+                    {todos.length === 0 && 
+                      <TodoItem 
+                        todo={{ ...emptyTodo, todo: 'No todos' }}
+                        toggleTodo={() => {}}
+                        deleteTodo={() => {}}
+                        disabled={true}
+                      />
+                    }
                     {todos.map(todo => (
                       <TodoItem 
                         key={todo.id}
                         todo={todo}
                         toggleTodo={toggleTodo}
+                        deleteTodo={deleteTodo}
                       />
                     ))}
                   </div>
@@ -116,13 +139,15 @@ function TodoInput({ addTodo }: TodoInputProps) {
 
 interface TodoItemProps {
   todo: Todo,
-  toggleTodo: (todo: Todo) => void
+  disabled?: boolean,
+  toggleTodo: (todo: Todo) => void,
+  deleteTodo: (todo: Todo) => void,
 }
 
-function TodoItem({ todo, toggleTodo }: TodoItemProps) {
+function TodoItem({ todo, toggleTodo, deleteTodo, disabled }: TodoItemProps) {
   return (
-    <div className="bg-slate-800" onClick={() => toggleTodo(todo)}>
-      <div className={`group ${todo.isCompleted ? 'checked' : ''} flex items-center p-4`}>
+    <div className="bg-slate-800 flex">
+      <div className={`group ${todo.isCompleted ? 'checked' : ''} flex items-center w-full p-4`} onClick={() => toggleTodo(todo)}>
         <input id="checkbox" type="checkbox" className="hidden" />
         <label htmlFor="checkbox" className="flex items-center cursor-pointer w-full">
           <div className="relative w-7 h-6 border rounded-full bg-slate-800 mr-3">
@@ -132,9 +157,12 @@ function TodoItem({ todo, toggleTodo }: TodoItemProps) {
               <path fill="currentColor" d="M5.75 13.354l-2.35-2.353a1.25 1.25 0 0 1 1.768-1.768l1.234 1.233 4.857-4.855a1.25 1.25 0 1 1 1.768 1.768l-5.625 5.624a1.25 1.25 0 0 1-1.768 0z"/>
             </svg>
           </div>
-          <span className="group-[.checked]:line-through group-[.checked]:text-slate-500 select-none ms-1 text-base inline-block w-full">{todo.todo}</span>
+          <span className={`group-[.checked]:line-through group-[.checked]:text-slate-500 ${disabled ? 'text-slate-500' : ''} select-none ms-1 text-base inline-block w-full`}>{todo.todo}</span>
         </label>
       </div>
+      {!disabled && 
+        <button className='border-0 p-4 bg-slate-800 text-slate-500 text-xl' onClick={() => deleteTodo(todo)}>&times;</button>
+      }
     </div>
   )
 }
